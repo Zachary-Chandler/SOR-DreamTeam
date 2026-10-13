@@ -134,6 +134,10 @@ def main():
             base = posixpath.basename(n)
             if base.startswith("._"):
                 continue
+            # The export also ships the social-network data unzipped, duplicating
+            # every filename stem (e.g. AGENCY.txt) alongside the real one.
+            if "DATA-SOCIAL" in n.upper():
+                continue
             stem, ext = posixpath.splitext(base)
             parent = posixpath.basename(posixpath.dirname(n))
             if ext.lower() == ".xml" and parent == "SqlBcpFormatFiles":
