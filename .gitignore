@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.log
+
+# Local datasets and database exports
+*.zip
+*.csv
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
