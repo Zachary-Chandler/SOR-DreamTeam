@@ -1,16 +1,26 @@
-# Texas Sex Offender Registry: Local Postgres Loader
+# Texas Sex Offender Registry: Local Postgres Pipeline
 
-Loads the Texas Department of Public Safety (DPS) public sex offender registry bulk export into a local PostgreSQL database. A full load of the 2026-10-07 export (about 108,000 registrants) takes about 10 seconds.
+Loads the Texas Department of Public Safety (DPS) public sex offender registry bulk export into a local PostgreSQL database, cleans it into a relational schema, and applies DPS removal notices. A full load of the 2026-10-07 export (about 108,000 registrants) takes about 10 seconds.
+
+| Script | What it does | Docs |
+| --- | --- | --- |
+| `load_registry_pg.py` | DPS export zip -> schema `sor` (raw) | this file |
+| `transform_to_cleaned.py` | `sor` -> schema `cleaned` (what the app uses) | `docs/database/TRANSFORM.md` |
+| `apply_removals.py` | Deletes people named in DPS removal emails, keeps a ledger in schema `removals` | `docs/database/REMOVALS.md` |
+| `inspect_registry.py` | Prints the tables and columns inside an export zip | |
+
+**Start with `SETUP.md`.** It has the full setup and the refresh routine. This README covers the loader in detail.
 
 ## Read this first
 
 - **Do not commit the registry data.** Each person downloads it themselves from DPS. The `.gitignore` in this repo excludes zip and database files; keep it that way.
 - Texas law restricts how registry information may be used, including a ban on using it to commit a crime or harass registrants. Read the terms you accept when you create your DPS account before sharing or republishing anything.
+- **Removal notices are a legal duty.** When DPS emails that someone has been removed from the registry, we must remove them from our copy (Texas Code of Criminal Procedure Ch. 62.251). Run `apply_removals.py` as soon as one arrives; see `SETUP.md`. Never commit the notice emails, which list names and dates of birth.
 - Not every registrant is in the public data. DPS says only fingerprint verification positively links a person to a record, and it disclaims responsibility for errors in secondary dissemination. The export changes twice a week, so keep the download date with the data.
 
 ## Requirements
 
-- PostgreSQL 16 or later (Postgres.app or Homebrew on a Mac)
+- PostgreSQL 18 (the version `docs/database/schema.sql` was dumped from; the loader alone works on 16+)
 - The `psql` command-line client on your PATH (the loader calls it)
 - Python 3.8 or later (standard library only; nothing to install)
 - A free TxDPS Public Website account to download the export
@@ -18,10 +28,10 @@ Loads the Texas Department of Public Safety (DPS) public sex offender registry b
 ## Setup
 
 1. **Download the export** from https://sor.dps.texas.gov (Download Registry). You get a zip like `20261007_DATA-CURRENT.zip`. Leave it zipped.
-2. **Install PostgreSQL.** Postgres.app (postgresapp.com): move it to Applications, open it, click Initialize. Or with Homebrew: `brew install postgresql@16` then `brew services start postgresql@16`.
-3. **Put `psql` on your PATH** (Postgres.app example):
+2. **Install PostgreSQL.** With Homebrew: `brew install postgresql@18` then `brew services start postgresql@18`. Or Postgres.app (postgresapp.com): move it to Applications, open it, click Initialize.
+3. **Put `psql` on your PATH** (Homebrew example; for Postgres.app use `/Applications/Postgres.app/Contents/Versions/latest/bin`):
    ```
-   echo 'export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"' >> ~/.zshrc
+   echo 'export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"' >> ~/.zshrc
    source ~/.zshrc
    psql --version
    ```
@@ -35,6 +45,8 @@ Loads the Texas Department of Public Safety (DPS) public sex offender registry b
    ```
 
 The loader prints one line per table. Re-running it with a newer export replaces the data without downtime: it builds a new schema, then swaps it in within one transaction.
+
+6. **Continue with `SETUP.md`** to build `cleaned` and re-apply any removal notices. A fresh raw load can bring back people DPS has told us to remove, until `apply_removals.py --reapply` runs.
 
 ## Verify
 
@@ -74,4 +86,5 @@ A failed run leaves a half-built schema `sor_new`; the next run drops it automat
 
 ## Next steps
 
-Map the table relationships and build a joined view with one record per registrant, then a read-only API on top of that view. Decide what the site is for and who uses it before building anything public.
+- Decide what the site is for and who uses it before building anything public.
+- Anything that serves registry data must read from `cleaned` (never `sor`), and any copy outside this database needs DPS removal notices applied too.

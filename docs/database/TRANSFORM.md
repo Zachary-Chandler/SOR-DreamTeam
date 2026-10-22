@@ -12,6 +12,8 @@ load_registry_pg.py   -->  schema `sor`      (raw, one table per source .txt fil
         |
         v
 transform_to_cleaned.py -->  schema `cleaned`  (the relational model in schema.sql)
+        |                          ^
+        |                          | apply_removals.py (DPS removal notices, ledger in schema `removals`)
         |
         v
         Myles's API / UI
@@ -80,4 +82,4 @@ The offense-dedup count (17) and orphaned-address count (1) both match the numbe
 
 ## Removal notices
 
-DPS removal-notice emails (Texas Code of Criminal Procedure Ch. 62.251) are handled by `apply_removals.py`, which keeps a ledger of removed DPS numbers in schema `removals`. The transform calls it on `cleaned_new` just before the swap, so removed people never reappear after a refresh. See `SETUP.md`.
+DPS removal-notice emails (Texas Code of Criminal Procedure Ch. 62.251) are handled by `apply_removals.py`, which keeps a ledger of removed DPS numbers in schema `removals`. The transform calls it on `cleaned_new` just before the swap, so removed people never reappear after a refresh. How it works and how it was tested: `REMOVALS.md`. Commands: `SETUP.md`.
