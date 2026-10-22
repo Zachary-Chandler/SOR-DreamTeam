@@ -1,2 +1,90 @@
-# Senior-Year-Capstone
+# Texas Sex Offender Registry: Local Postgres Pipeline
 
+Loads the Texas Department of Public Safety (DPS) public sex offender registry bulk export into a local PostgreSQL database, cleans it into a relational schema, and applies DPS removal notices. A full load of the 2026-10-07 export (about 108,000 registrants) takes about 10 seconds.
+
+| Script | What it does | Docs |
+| --- | --- | --- |
+| `load_registry_pg.py` | DPS export zip -> schema `sor` (raw) | this file |
+| `transform_to_cleaned.py` | `sor` -> schema `cleaned` (what the app uses) | `docs/database/TRANSFORM.md` |
+| `apply_removals.py` | Deletes people named in DPS removal emails, keeps a ledger in schema `removals` | `docs/database/REMOVALS.md` |
+| `inspect_registry.py` | Prints the tables and columns inside an export zip | |
+
+**Start with `SETUP.md`.** It has the full setup and the refresh routine. This README covers the loader in detail.
+
+## Read this first
+
+- **Do not commit the registry data.** Each person downloads it themselves from DPS. The `.gitignore` in this repo excludes zip and database files; keep it that way.
+- Texas law restricts how registry information may be used, including a ban on using it to commit a crime or harass registrants. Read the terms you accept when you create your DPS account before sharing or republishing anything.
+- **Removal notices are a legal duty.** When DPS emails that someone has been removed from the registry, we must remove them from our copy (Texas Code of Criminal Procedure Ch. 62.251). Run `apply_removals.py` as soon as one arrives; see `SETUP.md`. Never commit the notice emails, which list names and dates of birth.
+- Not every registrant is in the public data. DPS says only fingerprint verification positively links a person to a record, and it disclaims responsibility for errors in secondary dissemination. The export changes twice a week, so keep the download date with the data.
+
+## Requirements
+
+- PostgreSQL 18 (the version `docs/database/schema.sql` was dumped from; the loader alone works on 16+)
+- The `psql` command-line client on your PATH (the loader calls it)
+- Python 3.8 or later (standard library only; nothing to install)
+- A free TxDPS Public Website account to download the export
+
+## Setup
+
+1. **Download the export** from https://sor.dps.texas.gov (Download Registry). You get a zip like `20261007_DATA-CURRENT.zip`. Leave it zipped.
+2. **Install PostgreSQL.** With Homebrew: `brew install postgresql@18` then `brew services start postgresql@18`. Or Postgres.app (postgresapp.com): move it to Applications, open it, click Initialize.
+3. **Put `psql` on your PATH** (Homebrew example; for Postgres.app use `/Applications/Postgres.app/Contents/Versions/latest/bin`):
+   ```
+   echo 'export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"' >> ~/.zshrc
+   source ~/.zshrc
+   psql --version
+   ```
+4. **Create the database:**
+   ```
+   createdb sor
+   ```
+5. **Run the loader:**
+   ```
+   python3 load_registry_pg.py 20261007_DATA-CURRENT.zip postgresql://localhost/sor
+   ```
+
+The loader prints one line per table. Re-running it with a newer export replaces the data without downtime: it builds a new schema, then swaps it in within one transaction.
+
+6. **Continue with `SETUP.md`** to build `cleaned` and re-apply any removal notices. A fresh raw load can bring back people DPS has told us to remove, until `apply_removals.py --reapply` runs.
+
+## Verify
+
+```
+psql sor -c '\dt sor.*'
+psql sor -c 'SELECT count(*) FROM sor."PERSON"'
+psql sor -c 'SELECT * FROM sor._load_info'
+```
+
+Always write `sor."TableName"` with double quotes and exact capitalization. Tables live in the schema `sor`, not `public`. For the 2026-10-07 export expect about 30 tables, 108,280 rows in `PERSON` and 161,562 in `Offense`.
+
+## How the loader works
+
+- Reads the tab-delimited `.txt` files straight from the zip.
+- Takes column names and types from the `SqlBcpFormatFiles/*.xml` files in the zip.
+- Removes NUL bytes from rows (Postgres text cannot store them) and reports how many rows it changed.
+- Stores a column as text, with a `WARNING`, if any of its values do not fit the type DPS declares for it.
+- Skips macOS junk files and the two nested zips (documentation and social-network data).
+- Indexes every column whose name ends in `id`, and writes a `_load_info` table with the source zip name and load time.
+
+## Known open checks
+
+- NUL bytes appear in a very large share of rows in some tables (for example 112,717 of 161,562 `Offense` rows). If NUL is used as a real value, such as a flag, stripping it turns a 0 into a blank. Not yet verified.
+- 18 rows in `OFF_CODE_SOR` have a date in `VER_NBR`, which DPS declares as an integer, so that column is stored as text. Check that those rows are not shifted.
+- `OFF_CODE_SOR.txt` has 8,219 lines but 8,213 rows load; the 6 skipped lines have not been inspected.
+
+## Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| `command not found: createdb` or `psql` | Postgres tools are not on your PATH; redo setup step 3 |
+| `could not connect to server` | Start the server in Postgres.app |
+| `relation "sor.PERSON" does not exist` | Add the double quotes, and confirm the loader printed `Done` |
+| `extra data after last expected column` | You have an old copy of the loader; use the current one (it strips NUL bytes) |
+
+A failed run leaves a half-built schema `sor_new`; the next run drops it automatically.
+
+## Next steps
+
+- Decide what the site is for and who uses it before building anything public.
+- Anything that serves registry data must read from `cleaned` (never `sor`), and any copy outside this database needs DPS removal notices applied too.
