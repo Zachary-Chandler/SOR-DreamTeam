@@ -21,6 +21,8 @@ How it works
     - address rows whose IND_IDN has no matching individual are excluded from
       cleaned_new and reported at the end, never silently discarded (see
       "The unmatched address needs a documented handling decision" in the docs).
+- Re-applies the DPS removal ledger (apply_removals.py) to cleaned_new so removed
+  people never reappear after a refresh.
 - In one transaction, renames cleaned -> cleaned_old (dropped) and
   cleaned_new -> cleaned, so the app always sees either the complete old or
   complete new cleaned data, never a half-built one.
@@ -30,6 +32,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+import apply_removals
 
 SCHEMA_SQL = Path(__file__).parent / "docs" / "database" / "schema.sql"
 
@@ -131,6 +135,10 @@ def main():
         );
     ''').strip()
     print(f"Address rows excluded from cleaned_new (no matching individual): {orphans}")
+
+    # People DPS has told us to remove (see apply_removals.py) must not come back with a refresh.
+    for _sch, tbl, n in apply_removals.reapply(conn, ["cleaned_new"]):
+        print(f"removal ledger: deleted {n} from cleaned_new.{tbl}")
 
     run_sql(conn, SWAP_SQL, "swapping cleaned_new into cleaned")
     print("Done. Tables are in schema 'cleaned'.")

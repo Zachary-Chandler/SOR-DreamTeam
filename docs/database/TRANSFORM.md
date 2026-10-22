@@ -78,6 +78,6 @@ Run against the real 2026-09-16 export (`20260916_DATA-CURRENT.zip`):
 
 The offense-dedup count (17) and orphaned-address count (1) both match the numbers in `Database_Documentation.pdf` from the original by-hand development run, which is a good sign this transform reproduces the same cleaning logic rather than a different one that happens to also work.
 
-## Known gap (not yet solved here)
+## Removal notices
 
-This transform handles a one-time or one-off refresh. It does not yet handle the DPS removal-notice emails (Texas Code of Criminal Procedure Ch. 62.251) — people who must be deleted from `cleaned` (and ideally `sor`) outside the normal biweekly cycle. That's a separate script; see `SETUP.md`.
+DPS removal-notice emails (Texas Code of Criminal Procedure Ch. 62.251) are handled by `apply_removals.py`, which keeps a ledger of removed DPS numbers in schema `removals`. The transform calls it on `cleaned_new` just before the swap, so removed people never reappear after a refresh. See `SETUP.md`.

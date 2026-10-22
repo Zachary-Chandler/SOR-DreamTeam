@@ -46,4 +46,15 @@ psql sor -c 'SELECT * FROM sor._load_info'
 
 ## Removing people per DPS removal notices
 
-DPS periodically emails a list of people who must be removed from any registry copy we maintain (Texas Code of Criminal Procedure Ch. 62.251). That's a separate script (Kavan) keyed on `dps_nbr` — it should run against `cleaned.individual` (and ideally `sor` too, so a later re-run of the raw loader doesn't resurrect someone already removed) after each raw load.
+DPS emails a list of people who must be removed from any registry copy we maintain (Texas Code of Criminal Procedure Ch. 62.251). Download the email from Gmail (⋮ → Download message, gives a `.eml`), or save the body as text, and run:
+
+```
+python3 apply_removals.py notice.eml postgresql://localhost/sor --dry-run   # preview, changes nothing
+python3 apply_removals.py notice.eml postgresql://localhost/sor             # apply
+```
+
+- Keyed on `dps_nbr` only (zero-padded to 8 digits). Names and dates of birth in the email are used for a warning on mismatch and are never stored.
+- Deletes from `cleaned` and `sor` in one transaction, and records the DPS numbers in a ledger, `removals.removed_individual`, which lives outside both rebuilt schemas.
+- `transform_to_cleaned.py` re-applies the ledger to `cleaned_new` before the swap, so a refresh never brings a removed person back into `cleaned`. After each raw load, run `python3 apply_removals.py --reapply postgresql://localhost/sor` to clear them from `sor` as well.
+- Safe to re-run with the same notice. Refuses a notice listing more than 1000 people (`--max N` to override).
+- Tests: `python3 -m unittest discover tests`.
