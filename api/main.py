@@ -91,7 +91,11 @@ def individual(ind_idn: str):
     """, (ind_idn,))
     if not rows:
         raise HTTPException(status_code=404, detail="Record not found")
-    return {"individual_id": ind_idn, "names": rows}
+    # Photos aren't stored; this is a link to DPS's current photo (docs/database/PHOTOS.md).
+    photo = fetch_all("""
+        SELECT photo_url FROM cleaned.individual_photo WHERE ind_idn = %s AND has_photo
+    """, (ind_idn,))
+    return {"individual_id": ind_idn, "names": rows, "photo_url": photo[0]["photo_url"] if photo else None}
 
 
 @app.get("/api/individuals/{ind_idn}/offenses", dependencies=[Depends(authorize)])
