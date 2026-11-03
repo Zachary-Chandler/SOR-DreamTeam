@@ -554,6 +554,22 @@ CREATE INDEX idx_occupation_ind_idn ON cleaned.occupation USING btree (ind_idn);
 CREATE INDEX idx_occupation_event_ind_idn ON cleaned.occupation_event USING btree (ind_idn);
 CREATE INDEX idx_off_code_sor_code ON cleaned.off_code_sor USING btree (coo_cod, coj_cod, joo_cod, off_cod, ver_nbr);
 
+-- Photos are not stored. DPS serves each registrant's current photo from its public site,
+-- keyed by DPS number, so the app puts photo_url in an <img> tag and the browser loads it
+-- from DPS. has_photo comes from the export; DPS returns 404 when there is no photo.
+-- See docs/database/PHOTOS.md.
+CREATE VIEW cleaned.individual_photo AS
+ SELECT i.ind_idn,
+    i.dps_nbr,
+    ('https://sor.dps.texas.gov/Search/Rapsheet/CurrentPhoto?sid='::text || lpad(btrim(i.dps_nbr), 8, '0'::text)) AS photo_url,
+    (EXISTS ( SELECT 1
+           FROM cleaned.photo p
+          WHERE (p.ind_idn = i.ind_idn))) AS has_photo,
+    ( SELECT max(p.pos_dte) AS max
+           FROM cleaned.photo p
+          WHERE (p.ind_idn = i.ind_idn)) AS latest_photo_date
+   FROM cleaned.individual i;
+
 
 --
 -- PostgreSQL database dump complete
