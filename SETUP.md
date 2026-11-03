@@ -48,6 +48,7 @@ psql sor -c '\dt sor.*'
 psql sor -c '\dt cleaned.*'
 psql sor -c 'SELECT COUNT(*) FROM cleaned.individual'
 psql sor -c 'SELECT COUNT(*) FROM cleaned.offense'
+psql sor -c '\d cleaned.registration_event'   # one of the layout tables; see docs/database/LAYOUT.md
 psql sor -c 'SELECT * FROM sor._load_info'
 psql sor -c 'SELECT count(*) FROM removals.removed_individual'   # after the first removal notice
 psql sor -c 'SELECT * FROM removals.notice ORDER BY applied_at'

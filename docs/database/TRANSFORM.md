@@ -32,6 +32,7 @@ The raw export's column names turned out to be the literal source of the `cleane
 | `name` | `"NAME"` | 1:1, 6 columns each side |
 | `address` | `"Address"` | 1:1 column-wise, but see "Orphaned addresses" below |
 | `offense` | `"Offense"` | deduplicated, see "Offense dedup" below |
+| 22 more tables | the rest of the DPS layout | added 2026-11-02 to match `Layout.pdf`; see `LAYOUT.md` |
 
 All raw numeric/date columns are cast to `text` on the way into `cleaned`, matching how the existing `cleaned` schema declares those columns (per `Database_Documentation.pdf`: "Other listed cleaned source columns were observed as text... further typed conversions are optional future work").
 

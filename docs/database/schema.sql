@@ -296,6 +296,266 @@ ALTER TABLE ONLY cleaned.person
 
 
 --
+-- Tables below were added by hand to match the DPS table layout
+-- (Documentation/Layout.pdf inside the export zip). See docs/database/LAYOUT.md.
+--
+-- Their foreign keys are DEFERRABLE INITIALLY DEFERRED: apply_removals.py deletes a
+-- person's rows table by table in one transaction, and deferred keys are checked only
+-- at COMMIT, so the order it deletes in doesn't matter.
+--
+
+CREATE TABLE cleaned.birth_date (
+    dob_idn text NOT NULL,
+    per_idn text,
+    typ_cod text,
+    dob_dte timestamp without time zone,
+    CONSTRAINT birth_date_pk PRIMARY KEY (dob_idn),
+    CONSTRAINT birth_date_person_fk FOREIGN KEY (per_idn) REFERENCES cleaned.person(per_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.individual_sor (
+    ind_idn text NOT NULL,
+    dps_nbr text,
+    rsk_cod text,
+    ssz_cod text,
+    swd_cod text,
+    ert_cod text,
+    erd_dte timestamp without time zone,
+    vrp_cod text,
+    CONSTRAINT individual_sor_pk PRIMARY KEY (ind_idn),
+    CONSTRAINT individual_sor_individual_fk FOREIGN KEY (ind_idn) REFERENCES cleaned.individual(ind_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.photo (
+    photoid text NOT NULL,
+    ind_idn text,
+    pos_dte timestamp without time zone,
+    CONSTRAINT photo_pk PRIMARY KEY (photoid),
+    CONSTRAINT photo_individual_fk FOREIGN KEY (ind_idn) REFERENCES cleaned.individual(ind_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.registration_event (
+    eventid text NOT NULL,
+    ind_idn text,
+    evm_cod text,
+    evt_dte timestamp without time zone,
+    evo_nbr text,
+    ori_txt text,
+    CONSTRAINT registration_event_pk PRIMARY KEY (eventid),
+    CONSTRAINT registration_event_individual_sor_fk FOREIGN KEY (ind_idn) REFERENCES cleaned.individual_sor(ind_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.address_event (
+    addresseventid text NOT NULL,
+    eventid text,
+    ind_idn text,
+    pdv_cod text,
+    addressid text,
+    CONSTRAINT address_event_pk PRIMARY KEY (addresseventid),
+    CONSTRAINT address_event_registration_event_fk FOREIGN KEY (eventid) REFERENCES cleaned.registration_event(eventid) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT address_event_address_fk FOREIGN KEY (addressid) REFERENCES cleaned.address(addressid) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.institute (
+    instituteid text NOT NULL,
+    ins_cod text,
+    ins_txt text,
+    CONSTRAINT institute_pk PRIMARY KEY (instituteid)
+);
+
+CREATE TABLE cleaned.institute_campus (
+    campusid text NOT NULL,
+    instituteid text,
+    cam_txt text,
+    CONSTRAINT institute_campus_pk PRIMARY KEY (campusid),
+    CONSTRAINT institute_campus_institute_fk FOREIGN KEY (instituteid) REFERENCES cleaned.institute(instituteid) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.education (
+    educationid text NOT NULL,
+    ind_idn text,
+    campusid text,
+    emp_flg text,
+    stu_flg text,
+    uin_txt text,
+    ucm_txt text,
+    uct_txt text,
+    CONSTRAINT education_pk PRIMARY KEY (educationid),
+    CONSTRAINT education_individual_fk FOREIGN KEY (ind_idn) REFERENCES cleaned.individual(ind_idn) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT education_institute_campus_fk FOREIGN KEY (campusid) REFERENCES cleaned.institute_campus(campusid) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.education_event (
+    educationeventid text NOT NULL,
+    eventid text,
+    ind_idn text,
+    pdv_cod text,
+    educationid text,
+    CONSTRAINT education_event_pk PRIMARY KEY (educationeventid),
+    CONSTRAINT education_event_registration_event_fk FOREIGN KEY (eventid) REFERENCES cleaned.registration_event(eventid) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT education_event_education_fk FOREIGN KEY (educationid) REFERENCES cleaned.education(educationid) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- License and occupation tables: in the layout, but the current DPS export ships no data
+-- for them (only their format files). transform_to_cleaned.py fills them if `sor` ever has
+-- the source tables. The real link from license to issuer goes through two more DPS tables
+-- (OccupationalLicenseLicenses, OccupationalLicenseCategories), so there is no direct key.
+CREATE TABLE cleaned.license_issuers (
+    occupationallicenseissuersid text NOT NULL,
+    oli_txt text,
+    CONSTRAINT license_issuers_pk PRIMARY KEY (occupationallicenseissuersid)
+);
+
+CREATE TABLE cleaned.license (
+    licenseid text NOT NULL,
+    ind_idn text,
+    occupationallicenselicensesid text,
+    CONSTRAINT license_pk PRIMARY KEY (licenseid),
+    CONSTRAINT license_individual_fk FOREIGN KEY (ind_idn) REFERENCES cleaned.individual(ind_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.license_event (
+    licenseeventid text NOT NULL,
+    eventid text,
+    ind_idn text,
+    pdv_cod text,
+    licenseid text,
+    CONSTRAINT license_event_pk PRIMARY KEY (licenseeventid),
+    CONSTRAINT license_event_registration_event_fk FOREIGN KEY (eventid) REFERENCES cleaned.registration_event(eventid) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT license_event_license_fk FOREIGN KEY (licenseid) REFERENCES cleaned.license(licenseid) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.occupation (
+    occupationid text NOT NULL,
+    ind_idn text,
+    emp_txt text,
+    snu_nbr text,
+    sna_txt text,
+    cty_txt text,
+    sta_cod text,
+    zip_txt text,
+    occ_txt text,
+    occ_cod text,
+    CONSTRAINT occupation_pk PRIMARY KEY (occupationid),
+    CONSTRAINT occupation_individual_fk FOREIGN KEY (ind_idn) REFERENCES cleaned.individual(ind_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.occupation_event (
+    occupationeventid text NOT NULL,
+    eventid text,
+    ind_idn text,
+    pdv_cod text,
+    occupationid text,
+    CONSTRAINT occupation_event_pk PRIMARY KEY (occupationeventid),
+    CONSTRAINT occupation_event_registration_event_fk FOREIGN KEY (eventid) REFERENCES cleaned.registration_event(eventid) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT occupation_event_occupation_fk FOREIGN KEY (occupationid) REFERENCES cleaned.occupation(occupationid) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- Offense code lookup. The raw table has exact duplicate rows and some null code parts,
+-- so it gets a surrogate key like cleaned.offense. A few offenses use codes that are not
+-- in this table, so there is no foreign key from offense; join on the five code columns.
+CREATE TABLE cleaned.off_code_sor (
+    off_code_record_id bigint GENERATED ALWAYS AS IDENTITY,
+    coo_cod text,
+    coj_cod text,
+    joo_cod text,
+    off_cod text,
+    ver_nbr text,
+    len_txt text,
+    sts_cod text,
+    cit_txt text,
+    begindate timestamp without time zone,
+    enddate timestamp without time zone,
+    CONSTRAINT off_code_sor_pk PRIMARY KEY (off_code_record_id)
+);
+
+-- Code lookup tables (literals for the *_COD fields).
+CREATE TABLE cleaned.table_codes (
+    schemaname text NOT NULL,
+    tbl_cod text NOT NULL,
+    col_cod text NOT NULL,
+    val_cod text NOT NULL,
+    val_txt text,
+    fkref text,
+    CONSTRAINT table_codes_pk PRIMARY KEY (schemaname, tbl_cod, col_cod, val_cod)
+);
+
+CREATE TABLE cleaned.tbl (
+    tbl_idn text NOT NULL,
+    tbl_cod text,
+    tbl_txt text,
+    inq_txt text,
+    upd_txt text,
+    batch_id text,
+    CONSTRAINT tbl_pk PRIMARY KEY (tbl_idn)
+);
+
+CREATE TABLE cleaned.col (
+    col_idn text NOT NULL,
+    tbl_idn text,
+    col_cod text,
+    col_txt text,
+    batch_id text,
+    CONSTRAINT col_pk PRIMARY KEY (col_idn),
+    CONSTRAINT col_tbl_fk FOREIGN KEY (tbl_idn) REFERENCES cleaned.tbl(tbl_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE cleaned.val (
+    val_idn text NOT NULL,
+    col_idn text,
+    val_cod text,
+    val_txt text,
+    act_cod text,
+    lng_txt text,
+    app_cod text,
+    batch_id text,
+    CONSTRAINT val_pk PRIMARY KEY (val_idn),
+    CONSTRAINT val_col_fk FOREIGN KEY (col_idn) REFERENCES cleaned.col(col_idn) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- Some VAL_RELN rows point at VAL entries DPS no longer ships, so no foreign keys here;
+-- lookup rows are kept as-is rather than dropped.
+CREATE TABLE cleaned.val_reln (
+    vlr_idn text NOT NULL,
+    val_idn text,
+    var_idn text,
+    cmb_cod text,
+    batch_id text,
+    CONSTRAINT val_reln_pk PRIMARY KEY (vlr_idn)
+);
+
+-- NCIC place codes. place_code_types is in the layout but not in the export, so it stays
+-- empty and place_codes has no foreign key to it.
+CREATE TABLE cleaned.place_code_types (
+    plt_cod text NOT NULL,
+    plt_txt text,
+    CONSTRAINT place_code_types_pk PRIMARY KEY (plt_cod)
+);
+
+CREATE TABLE cleaned.place_codes (
+    plt_cod text NOT NULL,
+    plc_cod text NOT NULL,
+    plc_txt text,
+    CONSTRAINT place_codes_pk PRIMARY KEY (plt_cod, plc_cod)
+);
+
+CREATE INDEX idx_birth_date_per_idn ON cleaned.birth_date USING btree (per_idn);
+CREATE INDEX idx_photo_ind_idn ON cleaned.photo USING btree (ind_idn);
+CREATE INDEX idx_registration_event_ind_idn ON cleaned.registration_event USING btree (ind_idn);
+CREATE INDEX idx_address_event_eventid ON cleaned.address_event USING btree (eventid);
+CREATE INDEX idx_address_event_addressid ON cleaned.address_event USING btree (addressid);
+CREATE INDEX idx_address_event_ind_idn ON cleaned.address_event USING btree (ind_idn);
+CREATE INDEX idx_education_ind_idn ON cleaned.education USING btree (ind_idn);
+CREATE INDEX idx_education_event_eventid ON cleaned.education_event USING btree (eventid);
+CREATE INDEX idx_education_event_ind_idn ON cleaned.education_event USING btree (ind_idn);
+CREATE INDEX idx_license_ind_idn ON cleaned.license USING btree (ind_idn);
+CREATE INDEX idx_license_event_ind_idn ON cleaned.license_event USING btree (ind_idn);
+CREATE INDEX idx_occupation_ind_idn ON cleaned.occupation USING btree (ind_idn);
+CREATE INDEX idx_occupation_event_ind_idn ON cleaned.occupation_event USING btree (ind_idn);
+CREATE INDEX idx_off_code_sor_code ON cleaned.off_code_sor USING btree (coo_cod, coj_cod, joo_cod, off_cod, ver_nbr);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
