@@ -1,16 +1,19 @@
-.env
-.env.*
-!.env.example
-.venv/
-venv/
+# Registry data must never be committed
+*.zip
+*.db
+*.sqlite
+data/
+
+# Python
 __pycache__/
 *.pyc
-*.log
 
-# Local datasets and database exports
-*.zip
-*.csv
-*.dump
-*.backup
-*.sqlite
-*.sqlite3
+# macOS
+.DS_Store
+
+# DPS removal notices list real names and dates of birth; keep them out of the repo
+*.eml
+
+# Local environment
+.env
+.venv/

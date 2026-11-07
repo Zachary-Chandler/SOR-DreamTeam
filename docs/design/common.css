@@ -1,0 +1,15 @@
+body{margin:0;background:#fff;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;color:#1d2433}
+.canvas{position:relative}
+.box{position:absolute;background:#fff;border:2px solid #3b5b92;border-radius:10px;padding:8px 12px;box-shadow:0 2px 6px #0001;z-index:1}
+.box h3{margin:0 0 4px;font-size:16px;color:#1f3a6b}.box .n{float:right;font-weight:400;color:#6b778c;font-size:12px;margin-left:10px;margin-top:2px}
+.box div{font-size:12.5px;line-height:1.5;font-family:Menlo,monospace}
+.pk{color:#9a5b00}.fk{color:#2b6b3f}.note{font-family:-apple-system,Arial,sans-serif!important;color:#6b778c;font-style:italic}
+.box.root{border-color:#1f3a6b;border-width:3px;background:#eef3fb}
+.box.empty{border-style:dashed;border-color:#9aa5b8;background:#f6f7f9}.box.empty h3{color:#6b778c}
+.group{position:absolute;border:2px dashed #b9c3d4;border-radius:12px;padding:10px 14px;background:#fafbfd}
+.group h4{margin:0 0 6px;font-size:14px;color:#3b5b92}.group div{font-size:12.5px;line-height:1.6;font-family:Menlo,monospace}
+svg.links{position:absolute;inset:0;overflow:visible}
+svg.links polyline{fill:none;stroke:#5a6b86;stroke-width:1.8}svg.links polyline.dashed{stroke-dasharray:6 5;stroke:#9aa5b8}
+svg.links text{font-size:12px;fill:#5a6b86;font-style:italic}
+.title{position:absolute;left:40px;top:14px;font-size:24px;font-weight:700;color:#1f3a6b}
+.legend{position:absolute;font-size:13px;color:#4a556b;line-height:1.7}
