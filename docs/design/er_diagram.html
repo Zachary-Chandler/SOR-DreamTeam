@@ -1,0 +1,89 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ER diagram - cleaned schema</title>
+<link rel="stylesheet" href="common.css"><script src="diagram.js"></script>
+<style>.canvas{width:2120px;height:1240px}</style></head><body><div class="canvas">
+<svg class="links"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5a6b86"/></marker></defs></svg>
+<div class="title">ER diagram: schema <code>cleaned</code> (follows the DPS table layout)</div>
+
+<!-- person side -->
+<div class="box" id="name" style="left:40px;top:90px;width:250px"><h3>name <span class="n">396,570 rows</span></h3>
+  <div class="pk">PK nam_idn</div><div class="fk">FK per_idn → person</div><div>typ_cod (B = base, S = alias)</div><div>nam_txt, lna_txt, fna_txt</div></div>
+<div class="box" id="person" style="left:40px;top:340px;width:250px"><h3>person <span class="n">108,159</span></h3>
+  <div class="pk">PK per_idn</div><div class="fk">FK ind_idn → individual</div><div>sex_cod, rac_cod, eth_cod</div><div>hgt_qty, wgt_qty, hai_cod, eye_cod</div></div>
+<div class="box" id="birth_date" style="left:40px;top:600px;width:250px"><h3>birth_date <span class="n">129,451</span></h3>
+  <div class="pk">PK dob_idn</div><div class="fk">FK per_idn → person</div><div>typ_cod, dob_dte</div></div>
+<div class="box" id="photo" style="left:40px;top:820px;width:250px"><h3>photo <span class="n">105,650</span></h3>
+  <div class="pk">PK photoid</div><div class="fk">FK ind_idn → individual</div><div>pos_dte</div><div class="note">image itself linked from DPS</div></div>
+
+<!-- center -->
+<div class="box root" id="individual" style="left:420px;top:360px;width:250px"><h3>individual <span class="n">108,345</span></h3>
+  <div class="pk">PK ind_idn</div><div>dps_nbr (SID shown by DPS)</div></div>
+<div class="box" id="individual_sor" style="left:420px;top:90px;width:250px"><h3>individual_sor <span class="n">108,345</span></h3>
+  <div class="pk">PK ind_idn</div><div class="fk">FK ind_idn → individual</div><div>registration details</div></div>
+<div class="box" id="offense" style="left:420px;top:640px;width:250px"><h3>offense <span class="n">161,334</span></h3>
+  <div class="pk">PK offense_record_id (surrogate)</div><div class="fk">FK ind_idn → individual</div><div>offenseid, off_cod, cdd_dte</div><div>ost_cod, aov_nbr, sov_cod …</div></div>
+<div class="box" id="off_code_sor" style="left:420px;top:900px;width:250px"><h3>off_code_sor <span class="n">8,188</span></h3>
+  <div class="pk">PK off_code_record_id</div><div>coo/coj/joo/off_cod, ver_nbr</div><div class="note">joined on code parts, no FK</div></div>
+
+<!-- registration events -->
+<div class="box" id="registration_event" style="left:800px;top:90px;width:260px"><h3>registration_event <span class="n">108,146</span></h3>
+  <div class="pk">PK eventid</div><div class="fk">FK ind_idn → individual_sor</div><div>evm_cod, evt_dte, ori_txt</div></div>
+<div class="box" id="address" style="left:800px;top:640px;width:260px"><h3>address <span class="n">107,804</span></h3>
+  <div class="pk">PK addressid</div><div class="fk">FK ind_idn → individual</div><div>street, city, zip, county</div><div>lat_nbr, lon_nbr</div><div class="note">not exposed by the API</div></div>
+
+<div class="box" id="address_event" style="left:1190px;top:660px;width:260px"><h3>address_event <span class="n">108,146</span></h3>
+  <div class="pk">PK addresseventid</div><div class="fk">FK eventid → registration_event</div><div class="fk">FK addressid → address</div></div>
+<div class="box" id="education_event" style="left:1190px;top:60px;width:260px"><h3>education_event <span class="n">104,283</span></h3>
+  <div class="pk">PK educationeventid</div><div class="fk">FK eventid → registration_event</div><div class="fk">FK educationid → education</div></div>
+<div class="box empty" id="license_event" style="left:1190px;top:260px;width:260px"><h3>license_event <span class="n">empty</span></h3>
+  <div class="pk">PK licenseeventid</div><div class="fk">FK eventid → registration_event</div><div class="fk">FK licenseid → license</div></div>
+<div class="box empty" id="occupation_event" style="left:1190px;top:460px;width:260px"><h3>occupation_event <span class="n">empty</span></h3>
+  <div class="pk">PK occupationeventid</div><div class="fk">FK eventid → registration_event</div><div class="fk">FK occupationid → occupation</div></div>
+
+<div class="box" id="education" style="left:1580px;top:60px;width:240px"><h3>education <span class="n">834</span></h3>
+  <div class="pk">PK educationid</div><div class="fk">FK ind_idn → individual</div><div class="fk">FK campusid → institute_campus</div></div>
+<div class="box empty" id="license" style="left:1580px;top:260px;width:240px"><h3>license <span class="n">empty</span></h3>
+  <div class="pk">PK licenseid</div><div class="fk">FK ind_idn → individual</div></div>
+<div class="box empty" id="occupation" style="left:1580px;top:460px;width:240px"><h3>occupation <span class="n">empty</span></h3>
+  <div class="pk">PK occupationid</div><div class="fk">FK ind_idn → individual</div><div>employer, job title, address</div></div>
+<div class="box" id="institute_campus" style="left:1880px;top:60px;width:200px"><h3>institute_campus <span class="n">1,039</span></h3>
+  <div class="pk">PK campusid</div><div class="fk">FK instituteid → institute</div></div>
+<div class="box" id="institute" style="left:1880px;top:250px;width:200px"><h3>institute <span class="n">548</span></h3>
+  <div class="pk">PK instituteid</div></div>
+<div class="box empty" id="license_issuers" style="left:1880px;top:420px;width:200px"><h3>license_issuers <span class="n">empty</span></h3>
+  <div class="pk">PK occupational…issuersid</div><div class="note">no direct key from license</div></div>
+
+<!-- groups -->
+<div class="group" style="left:800px;top:880px;width:640px"><h4>Code / lookup tables (decode the *_cod columns)</h4>
+  <div>tbl (87) ← col (550) ← val (29,255)   ·   val_reln (32,688)</div>
+  <div>table_codes (201)   ·   place_codes (402)   ·   place_code_types (empty)</div></div>
+<div class="group" style="left:1580px;top:880px;width:500px"><h4>Views used by the API</h4>
+  <div>individual_search · offense_summary</div><div>search_results · individual_photo (photo_url)</div></div>
+
+<div class="legend" style="left:40px;top:1100px">
+  <b>How to read it:</b> each arrow points from a child table to its parent (many → one), following a foreign key.
+  <span style="display:inline-block;width:16px;height:12px;border:2px dashed #9aa5b8;background:#f6f7f9;vertical-align:middle;margin:0 4px 0 14px"></span>dashed box = table exists but DPS's export has no data for it.
+  Dashed line = joined in queries, no enforced foreign key.<br>
+  education, license and occupation also link to <b>individual</b> by ind_idn (shown in the box, line omitted for readability). Row counts from the 2026-09-16 export.
+</div>
+
+<i class="link" data-from="name" data-to="person"></i>
+<i class="link" data-from="birth_date" data-to="person"></i>
+<i class="link" data-from="person" data-to="individual"></i>
+<i class="link" data-from="photo" data-to="individual"></i>
+<i class="link" data-from="individual_sor" data-to="individual" data-label="1 : 1"></i>
+<i class="link" data-from="offense" data-to="individual"></i>
+<i class="link dashed" data-from="offense" data-to="off_code_sor" data-label="code lookup"></i>
+<i class="link" data-from="address" data-to="individual"></i>
+<i class="link" data-from="registration_event" data-to="individual_sor"></i>
+<i class="link" data-from="address_event" data-to="registration_event" data-via="1125,from 1125,to"></i>
+<i class="link" data-from="education_event" data-to="registration_event" data-via="1125,from 1125,to"></i>
+<i class="link" data-from="license_event" data-to="registration_event" data-via="1125,from 1125,to"></i>
+<i class="link" data-from="occupation_event" data-to="registration_event" data-via="1125,from 1125,to"></i>
+<i class="link" data-from="address_event" data-to="address"></i>
+<i class="link" data-from="education_event" data-to="education"></i>
+<i class="link" data-from="license_event" data-to="license"></i>
+<i class="link" data-from="occupation_event" data-to="occupation"></i>
+<i class="link" data-from="education" data-to="institute_campus"></i>
+<i class="link" data-from="institute_campus" data-to="institute"></i>
+</div></body></html>

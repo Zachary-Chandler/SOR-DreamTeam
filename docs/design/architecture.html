@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>System architecture</title>
+<link rel="stylesheet" href="common.css"><script src="diagram.js"></script>
+<style>.canvas{width:2040px;height:820px}.box{text-align:center}.box h3{font-size:15px}.box div{font-family:-apple-system,Arial,sans-serif}
+.ext{border-color:#9a5b00;background:#fff8ee}.ext h3{color:#7a4800}.db{border-color:#2b6b3f;background:#f1f8f3}.db h3{color:#1f5130}
+.ui{border-color:#1f3a6b;background:#eef3fb;border-width:3px}</style></head><body><div class="canvas">
+<svg class="links"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5a6b86"/></marker></defs></svg>
+<div class="title">System architecture</div>
+
+<div class="box ext" id="export" style="left:40px;top:90px;width:210px"><h3>DPS registry export</h3><div>.zip from sor.dps.texas.gov</div><div>downloaded by hand</div><div class="note">DPS updates it twice a week</div></div>
+<div class="box" id="loader" style="left:330px;top:100px;width:200px"><h3>load_registry_pg.py</h3><div>raw load (Roman)</div></div>
+<div class="box db" id="sor" style="left:610px;top:90px;width:210px"><h3>schema <code>sor</code></h3><div>raw tables, one per</div><div>export file</div></div>
+<div class="box" id="transform" style="left:900px;top:100px;width:210px"><h3>transform_to_cleaned.py</h3><div>cleaning (Zach)</div></div>
+<div class="box db" id="cleaned" style="left:1190px;top:90px;width:220px"><h3>schema <code>cleaned</code></h3><div>27 tables in DPS layout</div><div>+ 4 views for the API</div></div>
+
+<div class="box" id="api" style="left:1490px;top:90px;width:220px"><h3>FastAPI (read-only)</h3><div>SELECT-only access to <code>cleaned</code></div><div>returns JSON to the browser</div></div>
+<div class="box ui" id="ui" style="left:1780px;top:90px;width:220px"><h3>Griffin365 Registry Explorer</h3><div>browser dashboard</div></div>
+<div class="box ext" id="photos" style="left:1790px;top:440px;width:200px"><h3>DPS photo server</h3><div>CurrentPhoto?sid=…</div><div class="note">photos not stored by us</div></div>
+
+<div class="box ext" id="email" style="left:40px;top:430px;width:210px"><h3>DPS removal notice</h3><div>email from TxSOR@dps</div><div class="note">legal requirement (CCP 62.251)</div></div>
+<div class="box" id="removals" style="left:330px;top:440px;width:200px"><h3>apply_removals.py</h3><div>parse, dry-run, apply (Kavan)</div></div>
+<div class="box db" id="ledger" style="left:900px;top:430px;width:210px"><h3>schema <code>removals</code></h3><div>ledger of removed SIDs</div><div>never rebuilt</div></div>
+
+<div class="legend" style="left:40px;top:690px;width:1100px">
+  Both <code>sor</code> and <code>cleaned</code> are rebuilt in a staging schema and swapped in with one transaction, so the API never sees half-loaded data.
+  The removal ledger survives every rebuild and is re-applied by the transform, so a removed person can't come back with a refresh.
+  Dashed lines are reads, not data flowing through our pipeline: the transform reads the ledger, and the browser loads each photo straight from DPS.
+</div>
+
+<i class="link" data-from="export" data-to="loader"></i>
+<i class="link" data-from="loader" data-to="sor"></i>
+<i class="link" data-from="sor" data-to="transform"></i>
+<i class="link" data-from="transform" data-to="cleaned"></i>
+<i class="link" data-from="cleaned" data-to="api"></i>
+<i class="link" data-from="api" data-to="ui"></i>
+<i class="link dashed" data-from="photos" data-to="ui" data-label="image"></i>
+<i class="link" data-from="email" data-to="removals"></i>
+<i class="link" data-from="removals" data-to="ledger"></i>
+<i class="link" data-from="removals" data-to="sor" data-label="deletes"></i>
+<i class="link" data-from="removals" data-to="cleaned" data-label="deletes" data-via="from,640 to,640"></i>
+<i class="link dashed" data-from="ledger" data-to="transform" data-label="re-applied"></i>
+</div></body></html>
