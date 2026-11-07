@@ -1,4 +1,4 @@
-# Dream Team REST API
+# Griffin365 REST API
 
 This FastAPI app reads **existing** `cleaned` PostgreSQL tables and views. It does **not** create or load the database.
 
@@ -37,7 +37,7 @@ console.log(items);
 
 **Security and data handling:** The API does not return street addresses, coordinates, or bulk exports. It has no write routes. For any deployment outside a trusted local environment, add server-side authentication, rate limiting, logging, HTTPS, and a removal/suppression workflow that prevents DPS removal-notice records from being served, including after each refresh. A browser-visible API key is **not** a secret; do not rely on `X-API-Key` in public frontend JavaScript as access control. Prefer a backend-for-frontend session or another server-side authorization mechanism. Limit database privileges to `SELECT` on the required `cleaned` views/tables. Review DPS terms and applicable laws before public use. The current project does not yet implement the removal-notice process.
 
-**Notes:** `cleaned.search_results` may contain multiple name variants per individual. Search `offset` paginates rows, not unique individuals. `off_cod` and `ost_cod` are raw codes, not human-readable labels. The transform recreates the `cleaned` schema, so database grants may need reapplication after a refresh.
+**Notes:** Search matches every name on file, including aliases (DPS name type `S`), and returns one row per person under their base name (type `B`); `matched_names` lists the names that matched. Search `offset` paginates people. `off_cod` and `ost_cod` are raw codes, not human-readable labels. The transform recreates the `cleaned` schema, so database grants may need reapplication after a refresh.
 
 ## Browser testing dashboard
 

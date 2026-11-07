@@ -1,4 +1,4 @@
-"""Read-only API for the Dream Team cleaned PostgreSQL schema.
+"""Read-only API for the Griffin365 cleaned PostgreSQL schema.
 
 Run: uvicorn api.main:app --reload
 Never deploy this publicly without reviewing DPS publication/removal obligations.
@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     finally:
         pool.close()
 
-app = FastAPI(title="Dream Team Registry API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Griffin365 Registry API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False,
                    allow_methods=["GET"], allow_headers=["X-API-Key", "Content-Type"])
 
@@ -65,14 +65,34 @@ def search_individuals(
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0, le=10000),
 ):
-    """Search by name; results may have multiple rows per person/name variant."""
-    pattern = "%" + name.replace("%", "").replace("_", "") + "%"
+    """Search any name on file (aliases included); one row per person, shown under their base name.
+
+    matched_names lists the names that matched the search, so the UI can show an alias
+    like "SALLY,XX" under the person's real name.
+    """
+    term = name.replace("%", "").replace("_", "").strip()
+    # Checked after stripping wildcards: "%%" would otherwise match every name (bulk listing).
+    if len(term) < 2:
+        raise HTTPException(status_code=422, detail="Enter at least two letters or digits")
+    pattern = "%" + term + "%"
     rows = fetch_all("""
-        SELECT ind_idn, nam_txt, fna_txt, lna_txt, sex_cod,
-               total_offense_records, unique_offenses
-        FROM cleaned.search_results
-        WHERE (nam_txt ILIKE %s OR (COALESCE(fna_txt, '') || ' ' || COALESCE(lna_txt, '')) ILIKE %s)
-        ORDER BY lna_txt NULLS LAST, fna_txt NULLS LAST, ind_idn
+        WITH hits AS (
+            SELECT ind_idn, array_agg(DISTINCT nam_txt ORDER BY nam_txt) AS matched_names,
+                   min(sex_cod) AS sex_cod, min(total_offense_records) AS total_offense_records,
+                   min(unique_offenses) AS unique_offenses
+            FROM cleaned.search_results
+            WHERE (nam_txt ILIKE %s OR (COALESCE(fna_txt, '') || ' ' || COALESCE(lna_txt, '')) ILIKE %s)
+            GROUP BY ind_idn
+        )
+        SELECT h.ind_idn, COALESCE(b.nam_txt, h.matched_names[1]) AS nam_txt, b.fna_txt, b.lna_txt,
+               h.sex_cod, h.total_offense_records, h.unique_offenses, h.matched_names
+        FROM hits h
+        LEFT JOIN LATERAL (
+            SELECT n.nam_txt, n.fna_txt, n.lna_txt
+            FROM cleaned.person p JOIN cleaned.name n ON n.per_idn = p.per_idn
+            WHERE p.ind_idn = h.ind_idn AND n.typ_cod = 'B' LIMIT 1
+        ) b ON true
+        ORDER BY b.lna_txt NULLS LAST, b.fna_txt NULLS LAST, h.ind_idn
         LIMIT %s OFFSET %s
     """, (pattern, pattern, limit, offset))
     return {"items": rows, "limit": limit, "offset": offset, "has_more": len(rows) == limit}
@@ -86,8 +106,10 @@ def individual(ind_idn: str):
         SELECT ind_idn, nam_txt, fna_txt, lna_txt, sex_cod, rac_cod,
                total_offense_records, unique_offenses,
                earliest_offense_date, latest_offense_date
-        FROM cleaned.search_results WHERE ind_idn = %s
-        ORDER BY nam_txt NULLS LAST LIMIT 25
+        FROM cleaned.search_results s WHERE ind_idn = %s
+        -- Base name (typ_cod 'B') first so the UI title isn't an alias like "JOE,XX".
+        ORDER BY EXISTS (SELECT 1 FROM cleaned.name n WHERE n.nam_idn = s.nam_idn AND n.typ_cod = 'B') DESC,
+                 nam_txt NULLS LAST LIMIT 100
     """, (ind_idn,))
     if not rows:
         raise HTTPException(status_code=404, detail="Record not found")
