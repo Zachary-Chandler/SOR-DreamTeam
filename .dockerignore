@@ -1,0 +1,11 @@
+# Keep registry data, secrets and local envs out of build contexts
+.env
+.venv/
+.git/
+data/
+*.zip
+*.eml
+*.db
+*.sqlite
+__pycache__/
+docs/

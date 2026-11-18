@@ -1,5 +1,7 @@
 # Local setup
 
+> Prefer Docker? `DOCKER.md` runs the same pipeline with nothing installed but Docker Desktop.
+
 This covers getting a full local copy of the pipeline running: raw export -> `sor` schema -> `cleaned` schema, with DPS removal notices applied to both. Three scripts, three owners:
 
 1. **Raw load** (`load_registry_pg.py`, Roman) — loads the DPS export zip into schema `sor`.
